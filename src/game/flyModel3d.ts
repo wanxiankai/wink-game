@@ -7,50 +7,63 @@ export interface FlyModelParts {
   rightWing: THREE.Group;
   legs: THREE.Group[];
   antennae: THREE.Group[];
+  shadow: THREE.Mesh;
   materials: THREE.Material[];
 }
 
 const shinyBody = new THREE.MeshStandardMaterial({
-  color: "#1f271d",
-  roughness: 0.38,
-  metalness: 0.42
+  color: "#171816",
+  roughness: 0.26,
+  metalness: 0.72
 });
 
 const darkBody = new THREE.MeshStandardMaterial({
-  color: "#10110f",
-  roughness: 0.5,
-  metalness: 0.24
+  color: "#070707",
+  roughness: 0.34,
+  metalness: 0.5
 });
 
 const abdomenBand = new THREE.MeshStandardMaterial({
-  color: "#6f7a4d",
-  roughness: 0.32,
-  metalness: 0.55
+  color: "#242424",
+  roughness: 0.28,
+  metalness: 0.82
+});
+
+const chromeMaterial = new THREE.MeshStandardMaterial({
+  color: "#b7c1bd",
+  roughness: 0.18,
+  metalness: 0.92
+});
+
+const armorEdgeMaterial = new THREE.MeshStandardMaterial({
+  color: "#050505",
+  roughness: 0.2,
+  metalness: 0.86
 });
 
 const eyeMaterial = new THREE.MeshStandardMaterial({
-  color: "#8f1727",
+  color: "#5f211d",
   roughness: 0.2,
-  metalness: 0.15,
-  emissive: "#27030a",
-  emissiveIntensity: 0.28
+  metalness: 0.32,
+  emissive: "#180604",
+  emissiveIntensity: 0.22
 });
 
 const wingMaterial = new THREE.MeshPhysicalMaterial({
-  color: "#d9f1ee",
+  color: "#202827",
   roughness: 0.16,
   metalness: 0,
   transparent: true,
-  opacity: 0.34,
+  opacity: 0.26,
   side: THREE.DoubleSide,
   depthWrite: false,
   transmission: 0.18
 });
 
 const veinMaterial = new THREE.LineBasicMaterial({
-  color: "#3d493e",
+  color: "#c8d3d0",
   transparent: true,
-  opacity: 0.42
+  opacity: 0.72
 });
 
 const legMaterial = new THREE.MeshStandardMaterial({
@@ -65,9 +78,22 @@ const hairMaterial = new THREE.LineBasicMaterial({
   opacity: 0.42
 });
 
+const shadowMaterial = new THREE.MeshBasicMaterial({
+  color: "#000000",
+  transparent: true,
+  opacity: 0.18,
+  depthWrite: false
+});
+
 export function createRealisticFlyModel(): FlyModelParts {
   const root = new THREE.Group();
-  root.name = "video-inspired-realistic-fly";
+  root.name = "meshy-inspired-dorsal-mecha-fly";
+
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(18, 40), shadowMaterial.clone());
+  shadow.name = "screen-contact-shadow";
+  shadow.scale.set(1.3, 0.58, 1);
+  shadow.position.set(0, -1, -13);
+  root.add(shadow);
 
   const body = new THREE.Group();
   root.add(body);
@@ -78,29 +104,33 @@ export function createRealisticFlyModel(): FlyModelParts {
   abdomen.rotation.x = -0.06;
   body.add(abdomen);
 
-  for (let i = 0; i < 4; i++) {
-    const band = new THREE.Mesh(new THREE.TorusGeometry(5.4 - i * 0.18, 0.35, 8, 48, Math.PI * 1.38), abdomenBand);
-    band.name = "olive-abdomen-cross-band";
-    band.position.set(0, -11.2 + i * 2.6, 0.2);
+  for (let i = 0; i < 5; i++) {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(5.6 - i * 0.24, 0.28, 8, 56, Math.PI * 1.46), abdomenBand.clone());
+    band.name = "black-abdomen-armor-cross-band";
+    band.position.set(0, -12.2 + i * 2.25, 0.65);
     band.rotation.set(Math.PI / 2, 0, Math.PI * 0.81);
-    band.scale.set(1.08, 0.52, 1);
+    band.scale.set(1.12, 0.52, 1);
     body.add(band);
   }
 
+  body.add(createDorsalSpine());
+
   const thorax = createEllipsoid(7.2, 7.8, 5.8, shinyBody, 32);
-  thorax.name = "olive-black-armored-thorax";
+  thorax.name = "gloss-black-armored-thorax";
   thorax.position.set(0, 3.6, 0.5);
   thorax.rotation.x = 0.18;
   body.add(thorax);
 
-  const scutum = createEllipsoid(5.6, 4.6, 1.2, abdomenBand, 24);
-  scutum.name = "metallic-green-dorsal-plate";
+  const scutum = createEllipsoid(5.6, 4.6, 1.2, chromeMaterial, 24);
+  scutum.name = "silver-dorsal-machine-plate";
   scutum.position.set(0, 6.2, 5.0);
   scutum.rotation.x = 0.22;
   body.add(scutum);
 
+  body.add(createThoraxPanels());
+
   const head = createEllipsoid(5.4, 4.8, 4.6, darkBody, 32);
-  head.name = "compact-head";
+  head.name = "compact-armored-head";
   head.position.set(0, 11.8, -0.15);
   body.add(head);
 
@@ -115,6 +145,9 @@ export function createRealisticFlyModel(): FlyModelParts {
   rightEye.position.x = 3.8;
   rightEye.rotation.z = 0.26;
   body.add(rightEye);
+
+  body.add(createEyeFacetLines(-1));
+  body.add(createEyeFacetLines(1));
 
   body.add(createBristles());
 
@@ -141,8 +174,51 @@ export function createRealisticFlyModel(): FlyModelParts {
     rightWing,
     legs,
     antennae,
+    shadow,
     materials: collectMaterials(root)
   };
+}
+
+function createDorsalSpine(): THREE.Group {
+  const group = new THREE.Group();
+  group.name = "central-silver-mechanical-spine";
+
+  const rail = createSegment(new THREE.Vector3(0, -12.6, 5.3), new THREE.Vector3(0, 10.5, 5.9), 0.34, chromeMaterial);
+  rail.name = "raised-central-rail";
+  group.add(rail);
+
+  for (let i = 0; i < 7; i++) {
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(3.3 - i * 0.12, 0.72, 0.38), chromeMaterial.clone());
+    plate.name = "stacked-spine-armor-plate";
+    plate.position.set(0, -9.6 + i * 3.2, 6.1);
+    plate.rotation.z = i % 2 === 0 ? 0.06 : -0.06;
+    group.add(plate);
+  }
+
+  return group;
+}
+
+function createThoraxPanels(): THREE.Group {
+  const group = new THREE.Group();
+  group.name = "black-mechanical-thorax-panel-lines";
+
+  for (const side of [-1, 1] as const) {
+    const sidePlate = new THREE.Mesh(new THREE.BoxGeometry(1.0, 6.4, 0.34), armorEdgeMaterial.clone());
+    sidePlate.name = "side-armor-panel";
+    sidePlate.position.set(side * 3.6, 4.0, 6.0);
+    sidePlate.rotation.z = side * 0.28;
+    group.add(sidePlate);
+
+    for (let i = 0; i < 3; i++) {
+      const rivet = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8), chromeMaterial.clone());
+      rivet.name = "small-metal-rivet";
+      rivet.position.set(side * (2.0 + i * 1.0), 6.9 - i * 2.2, 6.3);
+      rivet.scale.z = 0.42;
+      group.add(rivet);
+    }
+  }
+
+  return group;
 }
 
 function createWing(side: -1 | 1): THREE.Group {
@@ -153,8 +229,8 @@ function createWing(side: -1 | 1): THREE.Group {
 
   const shape = new THREE.Shape();
   shape.moveTo(0, 0);
-  shape.bezierCurveTo(side * 8.2, 2.4, side * 18.8, 7.7, side * 23.8, 15.8);
-  shape.bezierCurveTo(side * 16.8, 18.8, side * 5.8, 14.6, side * 0.8, 2.4);
+  shape.bezierCurveTo(side * 7.4, -1.0, side * 19.8, 3.8, side * 25.4, 13.6);
+  shape.bezierCurveTo(side * 19.0, 18.4, side * 6.6, 14.8, side * 0.8, 2.4);
   shape.bezierCurveTo(side * 0.4, 1.2, 0, 0.4, 0, 0);
 
   const wing = new THREE.Mesh(new THREE.ShapeGeometry(shape), wingMaterial.clone());
@@ -163,11 +239,13 @@ function createWing(side: -1 | 1): THREE.Group {
 
   const veinPoints = [
     [new THREE.Vector3(0, 0, 0.04), new THREE.Vector3(side * 22.2, 14.9, 0.04)],
-    [new THREE.Vector3(side * 2.4, 1.6, 0.05), new THREE.Vector3(side * 20.2, 15.8, 0.05)],
-    [new THREE.Vector3(side * 4.2, 2.4, 0.06), new THREE.Vector3(side * 10.8, 14.6, 0.06)],
-    [new THREE.Vector3(side * 7.2, 4.7, 0.07), new THREE.Vector3(side * 15.8, 16.0, 0.07)],
-    [new THREE.Vector3(side * 5.5, 5.4, 0.08), new THREE.Vector3(side * 17.8, 9.2, 0.08)],
-    [new THREE.Vector3(side * 9.0, 8.2, 0.09), new THREE.Vector3(side * 21.2, 12.6, 0.09)]
+    [new THREE.Vector3(side * 1.5, 0.8, 0.05), new THREE.Vector3(side * 20.8, 2.7, 0.05)],
+    [new THREE.Vector3(side * 2.4, 1.6, 0.06), new THREE.Vector3(side * 20.2, 15.8, 0.06)],
+    [new THREE.Vector3(side * 4.2, 2.4, 0.07), new THREE.Vector3(side * 10.8, 14.6, 0.07)],
+    [new THREE.Vector3(side * 7.2, 4.7, 0.08), new THREE.Vector3(side * 15.8, 16.0, 0.08)],
+    [new THREE.Vector3(side * 5.5, 5.4, 0.09), new THREE.Vector3(side * 17.8, 9.2, 0.09)],
+    [new THREE.Vector3(side * 9.0, 8.2, 0.1), new THREE.Vector3(side * 21.2, 12.6, 0.1)],
+    [new THREE.Vector3(side * 12.5, 4.2, 0.11), new THREE.Vector3(side * 23.5, 11.8, 0.11)]
   ];
 
   for (const [start, end] of veinPoints) {
@@ -176,6 +254,20 @@ function createWing(side: -1 | 1): THREE.Group {
     group.add(line);
   }
 
+  return group;
+}
+
+function createEyeFacetLines(side: -1 | 1): THREE.Group {
+  const group = new THREE.Group();
+  group.name = side < 0 ? "left-compound-eye-facet-lines" : "right-compound-eye-facet-lines";
+  const material = new THREE.LineBasicMaterial({ color: "#c48a7a", transparent: true, opacity: 0.32 });
+  for (let i = -2; i <= 2; i++) {
+    const points = [
+      new THREE.Vector3(side * 3.05, 12.2 + i * 0.7, 3.45),
+      new THREE.Vector3(side * 5.25, 12.5 + i * 0.46, 2.85)
+    ];
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), material.clone()));
+  }
   return group;
 }
 
@@ -267,6 +359,9 @@ function collectMaterials(root: THREE.Object3D): THREE.Material[] {
     const mesh = object as THREE.Mesh;
     if (!mesh.material) return;
     const objectMaterials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const material of objectMaterials) {
+      material.userData.baseOpacity = material.opacity;
+    }
     materials.push(...objectMaterials);
   });
   return materials;

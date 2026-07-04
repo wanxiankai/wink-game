@@ -11,6 +11,12 @@ export const GAME = {
   earClosedThreshold: 0.22,
   idleChancePerSecond: 0.01,
   flyRadius: 18,
+  flyCrawlMinSpeed: 34,
+  flyCrawlMaxSpeed: 76,
+  flyFleeSpeedMultiplier: 4.2,
+  flyFlightAltitude: 46,
+  flyGroundScale: 0.74,
+  flyFlightScaleBoost: 0.36,
   maxParticles: 60
 };
 

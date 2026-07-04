@@ -6,6 +6,7 @@ import { createRealisticFlyModel, type FlyModelParts } from "./flyModel3d";
 interface FlyInstance {
   parts: FlyModelParts;
   seed: number;
+  sizeVariance: number;
 }
 
 export class Fly3DRenderer {
@@ -89,49 +90,71 @@ export class Fly3DRenderer {
       if (this.instances.has(fly.id)) continue;
       const parts = createRealisticFlyModel();
       const seed = Math.random() * Math.PI * 2;
-      parts.root.scale.setScalar(0.92 + Math.random() * 0.18);
+      const sizeVariance = 0.96 + Math.random() * 0.08;
+      parts.root.scale.setScalar(GAME.flyGroundScale * sizeVariance);
       this.scene.add(parts.root);
-      this.instances.set(fly.id, { parts, seed });
+      this.instances.set(fly.id, { parts, seed, sizeVariance });
     }
   }
 
   private updateInstance(instance: FlyInstance, fly: Fly, time: number): void {
-    const { parts, seed } = instance;
+    const { parts, seed, sizeVariance } = instance;
     const root = parts.root;
     const deadProgress = fly.state === "dead" ? Math.min(fly.stateTimer / 0.45, 1) : 0;
     const alpha = fly.state === "dead" ? Math.max(0, 1 - deadProgress * 0.92) : 1;
     const velocityAngle = Math.atan2(-fly.vy, fly.vx);
     const worldX = fly.x - this.width / 2;
     const worldY = this.height / 2 - fly.y;
-    const bob = fly.state === "dead" ? 0 : Math.sin(time * 8 + seed) * 2.1;
-    const fleeBank = fly.state === "fleeing" ? Math.sin(time * 24 + seed) * 0.32 : Math.sin(time * 5 + seed) * 0.08;
+    const flightLift = fly.altitude;
+    const isFlying = fly.state === "fleeing" && flightLift > 1;
+    const bob = fly.state === "dead" ? 0 : isFlying ? Math.sin(time * 18 + seed) * 1.6 : Math.sin(fly.crawlPhase + seed) * 0.7;
+    const fleeBank = isFlying ? Math.sin(time * 24 + seed) * 0.34 : Math.sin(fly.crawlPhase * 0.45 + seed) * 0.045;
 
     root.visible = alpha > 0.01;
-    root.position.set(worldX, worldY + bob, 0);
+    root.position.set(worldX, worldY + bob - flightLift * 0.04, flightLift);
     root.rotation.z = velocityAngle - Math.PI / 2 + fleeBank;
-    root.rotation.y = fly.state === "dead" ? deadProgress * Math.PI * 1.8 : Math.sin(time * 4 + seed) * 0.1;
-    root.rotation.x = -0.74 + (fly.state === "fleeing" ? -0.28 : 0) + deadProgress * 1.4;
+    root.rotation.y = fly.state === "dead" ? deadProgress * Math.PI * 1.8 : isFlying ? Math.sin(time * 8 + seed) * 0.14 : 0;
+    root.rotation.x = -0.1 + (isFlying ? -0.28 : 0) + deadProgress * 1.4;
 
     const baseScale = GAME.flyRadius / 18;
     const deadSquash = fly.state === "dead" ? 1 - deadProgress * 0.18 : 1;
-    root.scale.setScalar((0.92 + Math.sin(seed) * 0.04) * baseScale * deadSquash);
+    const altitudeRatio = Math.min(flightLift / GAME.flyFlightAltitude, 1);
+    const perspectiveScale = 1 + Math.pow(altitudeRatio, 1.18) * GAME.flyFlightScaleBoost;
+    const scaleBreath = isFlying ? Math.sin(time * 18 + seed) * 0.018 : Math.sin(fly.crawlPhase + seed) * 0.006;
+    root.scale.setScalar(GAME.flyGroundScale * sizeVariance * perspectiveScale * baseScale * deadSquash + scaleBreath);
 
-    const wingSpeed = fly.state === "fleeing" ? 1.42 : fly.state === "idle" ? 0.38 : 1;
-    const flap = Math.sin(fly.wingPhase * wingSpeed);
-    const flapOpen = fly.state === "dead" ? 0.18 : 0.72 + Math.abs(flap) * 0.62;
-    const tremor = fly.state === "idle" ? Math.sin(time * 16 + seed) * 0.05 : 0;
+    const flap = Math.sin(fly.wingPhase * 1.5);
+    const groundedWingTwitch = fly.state === "idle" ? Math.sin(time * 16 + seed) * 0.035 : Math.sin(fly.crawlPhase + seed) * 0.018;
 
-    parts.leftWing.rotation.set(0.18 + flapOpen * 0.58, -0.24, -0.56 - flapOpen + tremor);
-    parts.rightWing.rotation.set(0.18 + flapOpen * 0.58, 0.24, 0.56 + flapOpen - tremor);
+    if (isFlying) {
+      const flapOpen = 0.72 + Math.abs(flap) * 0.76;
+      parts.leftWing.scale.set(1, 1, 1);
+      parts.rightWing.scale.set(1, 1, 1);
+      parts.leftWing.rotation.set(0.2 + flapOpen * 0.62, -0.24, -0.68 - flapOpen);
+      parts.rightWing.rotation.set(0.2 + flapOpen * 0.62, 0.24, 0.68 + flapOpen);
+    } else {
+      parts.leftWing.scale.set(0.62, 0.3, 1);
+      parts.rightWing.scale.set(0.62, 0.3, 1);
+      parts.leftWing.rotation.set(0.02, -0.04, 1.26 + groundedWingTwitch);
+      parts.rightWing.rotation.set(0.02, 0.04, -1.26 - groundedWingTwitch);
+    }
 
-    parts.body.rotation.x = fly.state === "fleeing" ? -0.18 : Math.sin(time * 6 + seed) * 0.035;
-    parts.body.rotation.y = Math.sin(time * 3.2 + seed) * 0.055;
+    parts.body.rotation.x = isFlying ? -0.18 : Math.sin(fly.crawlPhase * 0.8 + seed) * 0.018;
+    parts.body.rotation.y = isFlying ? Math.sin(time * 8 + seed) * 0.06 : Math.sin(fly.crawlPhase * 0.5 + seed) * 0.025;
 
     parts.legs.forEach((leg, index) => {
-      const phase = time * (fly.state === "fleeing" ? 22 : 9) + seed + index * 0.88;
-      const crawl = fly.state === "dead" ? -0.6 : Math.sin(phase) * (fly.state === "idle" ? 0.08 : 0.18);
-      leg.rotation.x = crawl;
-      leg.rotation.z = Math.cos(phase * 0.7) * 0.08;
+      const phase = fly.crawlPhase + seed + index * 1.18;
+      if (fly.state === "dead") {
+        leg.rotation.x = -0.6;
+        leg.rotation.z = 0.12;
+      } else if (isFlying) {
+        leg.rotation.x = -0.32 + Math.sin(time * 18 + index) * 0.04;
+        leg.rotation.z = Math.cos(time * 16 + index) * 0.05;
+      } else {
+        const crawlAmount = fly.state === "idle" ? 0.045 : 0.28;
+        leg.rotation.x = Math.sin(phase) * crawlAmount;
+        leg.rotation.z = Math.cos(phase * 0.7) * 0.12;
+      }
     });
 
     parts.antennae.forEach((antenna, index) => {
@@ -139,9 +162,14 @@ export class Fly3DRenderer {
       antenna.rotation.x = Math.cos(time * 8 + seed + index) * 0.06;
     });
 
+    const shadowMaterial = parts.shadow.material as THREE.Material;
+    shadowMaterial.opacity = Math.max(0.02, 0.22 - flightLift / 260) * alpha;
+    parts.shadow.scale.set(1.3 + flightLift / 58, 0.58 + flightLift / 180, 1);
+
     for (const material of parts.materials) {
       material.transparent = true;
-      material.opacity = alpha;
+      if (material === shadowMaterial) continue;
+      material.opacity = ((material.userData.baseOpacity as number | undefined) ?? 1) * alpha;
     }
   }
 }

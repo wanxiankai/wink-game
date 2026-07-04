@@ -15,6 +15,8 @@ export class Fly {
   stateTimer = 0;
   respawnTimer = 0;
   rotation = 0;
+  altitude = 0;
+  crawlPhase = Math.random() * Math.PI * 2;
   wingPhase = Math.random() * Math.PI * 2;
 
   constructor(private readonly bounds: () => { width: number; height: number }) {
@@ -22,10 +24,11 @@ export class Fly {
   }
 
   update(dt: number): void {
-    this.wingPhase += dt * (this.state === "fleeing" ? 34 : 18);
+    this.wingPhase += dt * (this.state === "fleeing" ? 42 : this.state === "moving" ? 4 : 1.5);
 
     if (this.state === "dead") {
       this.stateTimer += dt;
+      this.altitude = Math.max(0, this.altitude - 150 * dt);
       this.y += 220 * dt;
       this.rotation += dt * 8;
       this.respawnTimer -= dt;
@@ -34,6 +37,8 @@ export class Fly {
     }
 
     if (this.state === "idle") {
+      this.altitude = 0;
+      this.crawlPhase += dt * 0.8;
       this.stateTimer -= dt;
       if (this.stateTimer <= 0) this.setVelocityFromAngle(Math.random() * Math.PI * 2, this.baseSpeed);
       return;
@@ -41,7 +46,10 @@ export class Fly {
 
     if (this.state === "fleeing") {
       this.stateTimer -= dt;
+      const flightProgress = 1 - clamp(this.stateTimer / GAME.fleeDuration, 0, 1);
+      this.altitude = Math.sin(flightProgress * Math.PI) * GAME.flyFlightAltitude;
       if (this.stateTimer <= 0) {
+        this.altitude = 0;
         this.setVelocityFromAngle(Math.atan2(this.vy, this.vx), this.baseSpeed);
       }
     } else if (Math.random() < GAME.idleChancePerSecond * dt) {
@@ -52,6 +60,10 @@ export class Fly {
 
     this.x += this.vx * dt;
     this.y += this.vy * dt;
+    if (this.state === "moving") {
+      this.altitude = 0;
+      this.crawlPhase += dt * Math.max(1, Math.hypot(this.vx, this.vy) / 8);
+    }
     this.bounceInsideBounds();
     this.rotation = Math.atan2(this.vy, this.vx);
   }
@@ -61,6 +73,7 @@ export class Fly {
     this.state = "dead";
     this.stateTimer = 0;
     this.respawnTimer = random(1, 3);
+    this.altitude = Math.max(0, this.altitude * 0.25);
     this.vx = random(-40, 40);
     this.vy = random(-80, -20);
   }
@@ -68,7 +81,7 @@ export class Fly {
   onFlee(fromX: number, fromY: number): void {
     if (this.state === "dead") return;
     const angle = Math.atan2(this.y - fromY, this.x - fromX);
-    this.setVelocityFromAngle(angle, this.baseSpeed * 3);
+    this.setVelocityFromAngle(angle, this.baseSpeed * GAME.flyFleeSpeedMultiplier);
     this.state = "fleeing";
     this.stateTimer = GAME.fleeDuration;
   }
@@ -95,12 +108,13 @@ export class Fly {
       this.y = height + inset;
     }
 
-    this.baseSpeed = random(80, 150);
+    this.baseSpeed = random(GAME.flyCrawlMinSpeed, GAME.flyCrawlMaxSpeed);
     const targetX = random(width * 0.2, width * 0.8);
     const targetY = random(height * 0.2, height * 0.8);
     this.setVelocityFromAngle(Math.atan2(targetY - this.y, targetX - this.x), this.baseSpeed);
     this.state = "moving";
     this.stateTimer = 0;
+    this.altitude = 0;
     this.rotation = Math.atan2(this.vy, this.vx);
   }
 
