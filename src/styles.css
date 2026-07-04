@@ -1,0 +1,345 @@
+:root {
+  color: #2e2a24;
+  background: #f8f0d8;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+button {
+  appearance: none;
+  border: 0;
+  border-radius: 8px;
+  min-height: 48px;
+  padding: 0 22px;
+  color: #2e2a24;
+  font: 800 16px/1 system-ui, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(46, 42, 36, 0.14);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+#camera,
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+#camera {
+  z-index: 0;
+  object-fit: cover;
+  transform: scaleX(-1);
+  opacity: 0;
+  filter: saturate(0.92) contrast(1.05);
+  transition: opacity 180ms ease;
+}
+
+.app--camera-background #camera {
+  opacity: 1;
+}
+
+#game {
+  z-index: 1;
+}
+
+.screen {
+  position: fixed;
+  z-index: 4;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: max(28px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right))
+    max(28px, env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left));
+  background:
+    linear-gradient(180deg, rgba(248, 240, 216, 0.88), rgba(248, 240, 216, 0.62)),
+    radial-gradient(circle at 12% 14%, rgba(245, 185, 87, 0.32), transparent 22%),
+    radial-gradient(circle at 86% 18%, rgba(34, 150, 243, 0.18), transparent 24%),
+    #f8f0d8;
+}
+
+.screen--active {
+  display: flex;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand__mark {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border: 3px solid #2e2a24;
+  border-radius: 50%;
+  background: #f04f57;
+  color: #fff8e8;
+  font: 900 28px/1 system-ui, sans-serif;
+  box-shadow: 0 12px 0 rgba(46, 42, 36, 0.12);
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #5b6c32;
+  font: 800 13px/1 system-ui, sans-serif;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+h1,
+h2 {
+  margin: 0;
+  max-width: 9em;
+  color: #2e2a24;
+  font: 950 46px/0.98 system-ui, sans-serif;
+  letter-spacing: 0;
+}
+
+h2 {
+  font-size: 38px;
+}
+
+.lead {
+  max-width: 30rem;
+  margin: 0;
+  color: #4b463d;
+  font: 650 18px/1.45 system-ui, sans-serif;
+}
+
+.menu-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.primary {
+  background: #f04f57;
+  color: #fff8e8;
+}
+
+.secondary {
+  background: #fff8e8;
+  color: #2e2a24;
+  border: 2px solid rgba(46, 42, 36, 0.24);
+}
+
+.hud {
+  position: fixed;
+  z-index: 3;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  display: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hud--active {
+  display: grid;
+}
+
+.hud div,
+.camera-toggle {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 2px solid rgba(46, 42, 36, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 248, 232, 0.78);
+  backdrop-filter: blur(8px);
+}
+
+.hud span,
+.camera-toggle span {
+  display: block;
+  color: #665f52;
+  font: 800 11px/1 system-ui, sans-serif;
+}
+
+.hud strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: #2e2a24;
+  font: 950 24px/1 system-ui, sans-serif;
+  text-overflow: ellipsis;
+}
+
+.camera-toggle {
+  display: grid;
+  grid-template-columns: auto;
+  align-items: center;
+  justify-items: center;
+  gap: 5px;
+  min-width: 74px;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+}
+
+.camera-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.camera-toggle i {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 24px;
+  border: 2px solid rgba(46, 42, 36, 0.32);
+  border-radius: 999px;
+  background: rgba(46, 42, 36, 0.14);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.camera-toggle i::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff8e8;
+  box-shadow: 0 2px 5px rgba(46, 42, 36, 0.25);
+  transition: transform 160ms ease;
+}
+
+.camera-toggle input:checked + i {
+  border-color: rgba(34, 150, 243, 0.65);
+  background: #2296f3;
+}
+
+.camera-toggle input:checked + i::after {
+  transform: translateX(20px);
+}
+
+.camera-toggle input:disabled + i {
+  opacity: 0.45;
+}
+
+.status-line,
+.tutorial-step {
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 248, 232, 0.82);
+  border: 2px solid rgba(46, 42, 36, 0.18);
+  font-weight: 850;
+}
+
+.tutorial-step {
+  color: #f04f57;
+  font-size: 26px;
+}
+
+.result-badge {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: #f5b957;
+  border: 4px solid #2e2a24;
+  color: #2e2a24;
+  font: 950 54px/1 system-ui, sans-serif;
+  box-shadow: 0 14px 0 rgba(46, 42, 36, 0.14);
+}
+
+#toast {
+  position: fixed;
+  z-index: 6;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  max-width: calc(100vw - 32px);
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(46, 42, 36, 0.9);
+  color: #fff8e8;
+  font: 750 14px/1.3 system-ui, sans-serif;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 12px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+#toast.toast--active {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+#orientationHint {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 24px;
+  background: #2e2a24;
+  color: #fff8e8;
+  font: 900 28px/1.2 system-ui, sans-serif;
+  text-align: center;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  #orientationHint {
+    display: grid;
+  }
+}
+
+@media (min-width: 760px) {
+  .screen {
+    align-items: center;
+    text-align: center;
+  }
+
+  .brand {
+    justify-content: center;
+  }
+
+  h1 {
+    font-size: 58px;
+  }
+
+  .hud {
+    left: 50%;
+    right: auto;
+    width: min(620px, calc(100vw - 24px));
+    transform: translateX(-50%);
+  }
+}
