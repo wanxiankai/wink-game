@@ -3,6 +3,7 @@ import type { EyeData, EyeId, GameState, PerceptionOutput } from "../types";
 import { formatRank, randomInt } from "../utils";
 import { Effects } from "./effects";
 import { Fly } from "./fly";
+import { Fly3DRenderer } from "./fly3dRenderer";
 import { Renderer } from "./renderer";
 import { SwatSystem } from "./swatSystem";
 
@@ -31,7 +32,7 @@ export class GameEngine {
   private endCallback: ((snapshot: GameSnapshot) => void) | undefined;
   private updateCallback: ((snapshot: GameSnapshot) => void) | undefined;
 
-  constructor(private readonly renderer: Renderer) {
+  constructor(private readonly renderer: Renderer, private readonly flyRenderer: Fly3DRenderer) {
     for (let i = 0; i < randomInt(GAME.minFlies, GAME.maxFlies); i++) {
       this.flies.push(new Fly(() => ({ width: this.renderer.width, height: this.renderer.height })));
     }
@@ -165,6 +166,7 @@ export class GameEngine {
         ? "请将眼睛对准摄像头"
         : undefined;
     this.renderer.render(this.flies, this.currentEyes, this.effects, pausedMessage);
+    this.flyRenderer.render(this.flies);
   }
 
   private applySwat(x: number, y: number, source: EyeId | "touch"): void {

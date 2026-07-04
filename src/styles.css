@@ -39,6 +39,8 @@ button:active {
 }
 
 #camera,
+#background,
+#flies3d,
 #game {
   position: fixed;
   inset: 0;
@@ -59,8 +61,17 @@ button:active {
   opacity: 1;
 }
 
-#game {
+#background {
   z-index: 1;
+}
+
+#flies3d {
+  z-index: 2;
+  pointer-events: none;
+}
+
+#game {
+  z-index: 3;
 }
 
 .screen {

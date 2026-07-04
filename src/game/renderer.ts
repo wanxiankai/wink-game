@@ -6,6 +6,7 @@ import { Fly } from "./fly";
 
 export class Renderer {
   private readonly ctx: CanvasRenderingContext2D;
+  private readonly backgroundCtx: CanvasRenderingContext2D;
   private readonly backgroundCache = document.createElement("canvas");
   private dpr = 1;
   private backgroundMode: BackgroundMode = "fixed";
@@ -14,30 +15,36 @@ export class Renderer {
   private cachedBackgroundHeight = 0;
   private cachedBackgroundDpr = 0;
 
-  constructor(private readonly canvas: HTMLCanvasElement) {
+  constructor(private readonly canvas: HTMLCanvasElement, private readonly backgroundCanvas: HTMLCanvasElement) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D is not supported");
+    const backgroundCtx = backgroundCanvas.getContext("2d");
+    if (!backgroundCtx) throw new Error("Canvas 2D is not supported");
     this.ctx = ctx;
+    this.backgroundCtx = backgroundCtx;
     this.resize();
     window.addEventListener("resize", () => this.resize());
   }
 
   get width(): number {
-    return this.canvas.width / this.dpr;
+    return this.backgroundCanvas.width / this.dpr;
   }
 
   get height(): number {
-    return this.canvas.height / this.dpr;
+    return this.backgroundCanvas.height / this.dpr;
   }
 
   resize(): void {
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
     const width = window.innerWidth;
     const height = window.innerHeight;
-    this.canvas.width = Math.floor(width * this.dpr);
-    this.canvas.height = Math.floor(height * this.dpr);
-    this.canvas.style.width = `${width}px`;
-    this.canvas.style.height = `${height}px`;
+    for (const target of [this.backgroundCanvas, this.canvas]) {
+      target.width = Math.floor(width * this.dpr);
+      target.height = Math.floor(height * this.dpr);
+      target.style.width = `${width}px`;
+      target.style.height = `${height}px`;
+    }
+    this.backgroundCtx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     this.cachedBackgroundWidth = 0;
   }
@@ -52,7 +59,8 @@ export class Renderer {
 
   render(flies: Fly[], eyes: EyeData[], effects: Effects, pausedMessage?: string): void {
     this.drawBackground();
-    flies.forEach((fly) => this.drawFly(fly));
+    void flies;
+    this.ctx.clearRect(0, 0, this.width, this.height);
     this.drawParticles(effects);
     this.drawSwats(effects);
     if (this.eyeFocusVisible) eyes.forEach((eye) => eye.isVisible && this.drawCrosshair(eye));
@@ -61,7 +69,7 @@ export class Renderer {
   }
 
   private drawBackground(): void {
-    const ctx = this.ctx;
+    const ctx = this.backgroundCtx;
     const width = this.width;
     const height = this.height;
     ctx.clearRect(0, 0, width, height);
@@ -117,66 +125,13 @@ export class Renderer {
   }
 
   private drawCameraOverlay(width: number, height: number): void {
-    const ctx = this.ctx;
+    const ctx = this.backgroundCtx;
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
     gradient.addColorStop(0, "rgba(248,240,216,0.24)");
     gradient.addColorStop(0.48, "rgba(248,240,216,0.06)");
     gradient.addColorStop(1, "rgba(46,42,36,0.18)");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
-  }
-
-  private drawFly(fly: Fly): void {
-    const ctx = this.ctx;
-    const deadProgress = fly.state === "dead" ? Math.min(fly.stateTimer / 0.45, 1) : 0;
-    const alpha = fly.state === "dead" ? 1 - deadProgress : 1;
-    const wingScale = 0.7 + Math.abs(Math.sin(fly.wingPhase)) * 0.45;
-
-    ctx.save();
-    ctx.translate(fly.x, fly.y);
-    ctx.rotate(fly.rotation + Math.PI / 2);
-    ctx.globalAlpha = alpha;
-
-    if (fly.state === "fleeing") {
-      ctx.strokeStyle = "rgba(240,128,60,0.35)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(0, 18);
-      ctx.lineTo(0, 42);
-      ctx.stroke();
-    }
-
-    ctx.fillStyle = "rgba(255,255,255,0.58)";
-    ctx.strokeStyle = "rgba(46,42,36,0.34)";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.ellipse(-13, -3, 11, 18 * wingScale, -0.42, 0, Math.PI * 2);
-    ctx.ellipse(13, -3, 11, 18 * wingScale, 0.42, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.fillStyle = fly.state === "dead" ? "#3d3831" : "#282522";
-    ctx.beginPath();
-    ctx.ellipse(0, 3, 10, 18, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#151310";
-    ctx.beginPath();
-    ctx.arc(0, -15, 8, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = "#151310";
-    ctx.lineWidth = 2;
-    for (const side of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(side * 7, -2);
-      ctx.lineTo(side * 19, 5);
-      ctx.moveTo(side * 7, 6);
-      ctx.lineTo(side * 21, 16);
-      ctx.stroke();
-    }
-
-    ctx.restore();
   }
 
   private drawCrosshair(eye: EyeData): void {

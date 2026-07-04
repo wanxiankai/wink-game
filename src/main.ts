@@ -1,15 +1,19 @@
 import "./styles.css";
 import { GameEngine, type GameSnapshot } from "./game/engine";
+import { Fly3DRenderer } from "./game/fly3dRenderer";
 import { Renderer } from "./game/renderer";
 import { PerceptionModule } from "./perception/perception";
 import { PERFORMANCE } from "./config";
 import type { BackgroundMode, PerceptionOutput } from "./types";
 
 const app = mustGet<HTMLElement>("app");
+const backgroundCanvas = mustGet<HTMLCanvasElement>("background");
+const flyCanvas = mustGet<HTMLCanvasElement>("flies3d");
 const canvas = mustGet<HTMLCanvasElement>("game");
 const video = mustGet<HTMLVideoElement>("camera");
-const renderer = new Renderer(canvas);
-const engine = new GameEngine(renderer);
+const renderer = new Renderer(canvas, backgroundCanvas);
+const flyRenderer = new Fly3DRenderer(flyCanvas);
+const engine = new GameEngine(renderer, flyRenderer);
 const perception = new PerceptionModule(video);
 
 const screens = {
