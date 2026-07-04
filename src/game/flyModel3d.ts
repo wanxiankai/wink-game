@@ -5,6 +5,7 @@ export interface FlyModelParts {
   body: THREE.Group;
   leftWing: THREE.Group;
   rightWing: THREE.Group;
+  foldedWings: THREE.Group[];
   legs: THREE.Group[];
   antennae: THREE.Group[];
   shadow: THREE.Mesh;
@@ -81,7 +82,7 @@ const hairMaterial = new THREE.LineBasicMaterial({
 const shadowMaterial = new THREE.MeshBasicMaterial({
   color: "#000000",
   transparent: true,
-  opacity: 0.18,
+  opacity: 0.1,
   depthWrite: false
 });
 
@@ -91,7 +92,7 @@ export function createRealisticFlyModel(): FlyModelParts {
 
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(18, 40), shadowMaterial.clone());
   shadow.name = "screen-contact-shadow";
-  shadow.scale.set(1.3, 0.58, 1);
+  shadow.scale.set(0.66, 0.28, 1);
   shadow.position.set(0, -1, -13);
   root.add(shadow);
 
@@ -159,6 +160,9 @@ export function createRealisticFlyModel(): FlyModelParts {
   const rightWing = createWing(1);
   body.add(leftWing, rightWing);
 
+  const foldedWings = [createFoldedWing(-1), createFoldedWing(1)];
+  foldedWings.forEach((wing) => body.add(wing));
+
   const legs = createLegs();
   legs.forEach((leg) => body.add(leg));
 
@@ -172,11 +176,40 @@ export function createRealisticFlyModel(): FlyModelParts {
     body,
     leftWing,
     rightWing,
+    foldedWings,
     legs,
     antennae,
     shadow,
     materials: collectMaterials(root)
   };
+}
+
+function createFoldedWing(side: -1 | 1): THREE.Group {
+  const group = new THREE.Group();
+  group.name = side < 0 ? "left-folded-back-wing" : "right-folded-back-wing";
+  group.position.set(side * 0.32, 2.0, 6.2);
+  group.rotation.set(0.02, side * 0.012, side * 0.01);
+
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.bezierCurveTo(side * 0.22, -3.4, side * 0.18, -9.6, side * 0.04, -15.2);
+  shape.bezierCurveTo(side * -0.16, -9.8, side * -0.12, -3.2, 0, 0);
+
+  const material = wingMaterial.clone();
+  material.color = new THREE.Color("#151918");
+  material.opacity = 0.045;
+  const folded = new THREE.Mesh(new THREE.ShapeGeometry(shape), material);
+  folded.name = "folded-translucent-wing-membrane";
+  group.add(folded);
+
+  const vein = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -1, 0.03), new THREE.Vector3(side * 0.2, -16.2, 0.03)]),
+    new THREE.LineBasicMaterial({ color: "#66706c", transparent: true, opacity: 0.08 })
+  );
+  vein.name = "folded-wing-center-vein";
+  group.add(vein);
+
+  return group;
 }
 
 function createDorsalSpine(): THREE.Group {

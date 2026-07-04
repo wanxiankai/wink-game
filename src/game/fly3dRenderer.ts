@@ -107,20 +107,20 @@ export class Fly3DRenderer {
     const worldY = this.height / 2 - fly.y;
     const flightLift = fly.altitude;
     const isFlying = fly.state === "fleeing" && flightLift > 1;
-    const bob = fly.state === "dead" ? 0 : isFlying ? Math.sin(time * 18 + seed) * 1.6 : Math.sin(fly.crawlPhase + seed) * 0.7;
-    const fleeBank = isFlying ? Math.sin(time * 24 + seed) * 0.34 : Math.sin(fly.crawlPhase * 0.45 + seed) * 0.045;
+    const bob = fly.state === "dead" ? 0 : isFlying ? 0 : Math.sin(fly.crawlPhase + seed) * 0.7;
+    const crawlBank = isFlying ? 0 : Math.sin(fly.crawlPhase * 0.45 + seed) * 0.045;
 
     root.visible = alpha > 0.01;
     root.position.set(worldX, worldY + bob - flightLift * 0.04, flightLift);
-    root.rotation.z = velocityAngle - Math.PI / 2 + fleeBank;
-    root.rotation.y = fly.state === "dead" ? deadProgress * Math.PI * 1.8 : isFlying ? Math.sin(time * 8 + seed) * 0.14 : 0;
-    root.rotation.x = -0.1 + (isFlying ? -0.28 : 0) + deadProgress * 1.4;
+    root.rotation.z = velocityAngle - Math.PI / 2 + crawlBank;
+    root.rotation.y = fly.state === "dead" ? deadProgress * Math.PI * 1.8 : 0;
+    root.rotation.x = -0.1 + (isFlying ? -0.12 : 0) + deadProgress * 1.4;
 
     const baseScale = GAME.flyRadius / 18;
     const deadSquash = fly.state === "dead" ? 1 - deadProgress * 0.18 : 1;
     const altitudeRatio = Math.min(flightLift / GAME.flyFlightAltitude, 1);
     const perspectiveScale = 1 + Math.pow(altitudeRatio, 1.18) * GAME.flyFlightScaleBoost;
-    const scaleBreath = isFlying ? Math.sin(time * 18 + seed) * 0.018 : Math.sin(fly.crawlPhase + seed) * 0.006;
+    const scaleBreath = isFlying ? 0 : Math.sin(fly.crawlPhase + seed) * 0.006;
     root.scale.setScalar(GAME.flyGroundScale * sizeVariance * perspectiveScale * baseScale * deadSquash + scaleBreath);
 
     const flap = Math.sin(fly.wingPhase * 1.5);
@@ -128,19 +128,29 @@ export class Fly3DRenderer {
 
     if (isFlying) {
       const flapOpen = 0.72 + Math.abs(flap) * 0.76;
+      parts.leftWing.visible = true;
+      parts.rightWing.visible = true;
+      parts.foldedWings.forEach((wing) => {
+        wing.visible = false;
+      });
       parts.leftWing.scale.set(1, 1, 1);
       parts.rightWing.scale.set(1, 1, 1);
       parts.leftWing.rotation.set(0.2 + flapOpen * 0.62, -0.24, -0.68 - flapOpen);
       parts.rightWing.rotation.set(0.2 + flapOpen * 0.62, 0.24, 0.68 + flapOpen);
     } else {
-      parts.leftWing.scale.set(0.62, 0.3, 1);
-      parts.rightWing.scale.set(0.62, 0.3, 1);
-      parts.leftWing.rotation.set(0.02, -0.04, 1.26 + groundedWingTwitch);
-      parts.rightWing.rotation.set(0.02, 0.04, -1.26 - groundedWingTwitch);
+      parts.leftWing.visible = false;
+      parts.rightWing.visible = false;
+      parts.foldedWings.forEach((wing) => {
+        wing.visible = false;
+      });
+      parts.leftWing.scale.set(0.16, 0.06, 1);
+      parts.rightWing.scale.set(0.16, 0.06, 1);
+      parts.leftWing.rotation.set(0.01, -0.02, 1.58 + groundedWingTwitch * 0.35);
+      parts.rightWing.rotation.set(0.01, 0.02, -1.58 - groundedWingTwitch * 0.35);
     }
 
-    parts.body.rotation.x = isFlying ? -0.18 : Math.sin(fly.crawlPhase * 0.8 + seed) * 0.018;
-    parts.body.rotation.y = isFlying ? Math.sin(time * 8 + seed) * 0.06 : Math.sin(fly.crawlPhase * 0.5 + seed) * 0.025;
+    parts.body.rotation.x = isFlying ? 0 : Math.sin(fly.crawlPhase * 0.8 + seed) * 0.018;
+    parts.body.rotation.y = isFlying ? 0 : Math.sin(fly.crawlPhase * 0.5 + seed) * 0.025;
 
     parts.legs.forEach((leg, index) => {
       const phase = fly.crawlPhase + seed + index * 1.18;
@@ -148,8 +158,8 @@ export class Fly3DRenderer {
         leg.rotation.x = -0.6;
         leg.rotation.z = 0.12;
       } else if (isFlying) {
-        leg.rotation.x = -0.32 + Math.sin(time * 18 + index) * 0.04;
-        leg.rotation.z = Math.cos(time * 16 + index) * 0.05;
+        leg.rotation.x = -0.32;
+        leg.rotation.z = 0.04;
       } else {
         const crawlAmount = fly.state === "idle" ? 0.045 : 0.28;
         leg.rotation.x = Math.sin(phase) * crawlAmount;
@@ -163,13 +173,30 @@ export class Fly3DRenderer {
     });
 
     const shadowMaterial = parts.shadow.material as THREE.Material;
-    shadowMaterial.opacity = Math.max(0.02, 0.22 - flightLift / 260) * alpha;
-    parts.shadow.scale.set(1.3 + flightLift / 58, 0.58 + flightLift / 180, 1);
+    shadowMaterial.opacity = Math.max(0.015, 0.12 - flightLift / 360) * alpha;
+    parts.shadow.scale.set(0.72 + flightLift / 110, 0.3 + flightLift / 260, 1);
 
     for (const material of parts.materials) {
       material.transparent = true;
       if (material === shadowMaterial) continue;
       material.opacity = ((material.userData.baseOpacity as number | undefined) ?? 1) * alpha;
     }
+    this.setWingVisibility(parts, isFlying, alpha);
+  }
+
+  private setWingVisibility(parts: FlyModelParts, isFlying: boolean, alpha: number): void {
+    const wingOpacityScale = isFlying ? 1 : 0.06;
+    const applyOpacity = (object: THREE.Object3D): void => {
+      const mesh = object as THREE.Mesh | THREE.Line;
+      if (!mesh.material) return;
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+      for (const material of materials) {
+        material.transparent = true;
+        material.opacity = ((material.userData.baseOpacity as number | undefined) ?? 1) * alpha * wingOpacityScale;
+      }
+    };
+
+    parts.leftWing.traverse(applyOpacity);
+    parts.rightWing.traverse(applyOpacity);
   }
 }
